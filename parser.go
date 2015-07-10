@@ -1,13 +1,13 @@
 package json
 
 import (
-	"bytes"
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 type DecodeState struct {
-	cur []byte // current bytes
+	cur string // current bytes
 	err error
 }
 
@@ -102,13 +102,13 @@ func (s *DecodeState) DecodeString() interface{} {
 		return nil
 	}
 
-	quotePos := bytes.IndexByte(s.cur, '"')
+	quotePos := strings.IndexByte(s.cur, '"')
 	if quotePos < 0 {
 		s.err = fmt.Errorf("incorrect syntax (expected close quote)")
 		return nil
 	}
 	// fast path
-	if bytes.IndexByte(s.cur[:quotePos], '\\') < 0 {
+	if strings.IndexByte(s.cur[:quotePos], '\\') < 0 {
 		val := s.cur[:quotePos]
 		s.cur = s.cur[quotePos+1:]
 		return string(val)
@@ -199,21 +199,21 @@ func (s *DecodeState) DecodeValue() interface{} {
 	case '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
 		return s.DecodeNumber()
 	case 't':
-		if len(s.cur) >= 4 && bytes.Equal(s.cur[:4], []byte("true")) {
+		if len(s.cur) >= 4 && s.cur[:4] == "true" {
 			s.cur = s.cur[4:]
 			return true
 		} else {
 			s.err = fmt.Errorf("'true' expected")
 		}
 	case 'f':
-		if len(s.cur) >= 5 && bytes.Equal(s.cur[:5], []byte("false")) {
+		if len(s.cur) >= 5 && s.cur[:5] == "false" {
 			s.cur = s.cur[5:]
 			return false
 		} else {
 			s.err = fmt.Errorf("'false' expected")
 		}
 	case 'n':
-		if len(s.cur) >= 4 && bytes.Equal(s.cur[:4], []byte("null")) {
+		if len(s.cur) >= 4 && s.cur[:4] == "null" {
 			s.cur = s.cur[4:]
 			return nil
 		} else {
@@ -225,7 +225,7 @@ func (s *DecodeState) DecodeValue() interface{} {
 	return nil
 }
 
-func Decode(json []byte) (interface{}, error) {
+func Decode(json string) (interface{}, error) {
 	state := DecodeState{cur: json}
 	ret := state.DecodeValue()
 	return ret, state.err
