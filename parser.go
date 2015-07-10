@@ -11,12 +11,12 @@ var (
 	PreallocateObjectElems = 2
 )
 
-type DecodeState struct {
+type decodeState struct {
 	cur string // current bytes
 	err error
 }
 
-func (s *DecodeState) SkipSpaces() {
+func (s *decodeState) skipSpaces() {
 	if len(s.cur) == 0 {
 		return
 	}
@@ -34,10 +34,10 @@ func (s *DecodeState) SkipSpaces() {
 	}
 }
 
-func (s *DecodeState) DecodeSlice() []interface{} {
+func (s *decodeState) decodeSlice() []interface{} {
 	arr := make([]interface{}, 0, PreallocateSliceElems)
 
-	s.SkipSpaces()
+	s.skipSpaces()
 	for {
 		if len(s.cur) == 0 {
 			s.err = fmt.Errorf("incorrect syntax")
@@ -49,25 +49,25 @@ func (s *DecodeState) DecodeSlice() []interface{} {
 			return arr
 		}
 
-		val := s.DecodeValue()
+		val := s.decodeValue()
 		if s.err != nil {
 			return arr
 		}
 		arr = append(arr, val)
 
-		s.SkipSpaces()
+		s.skipSpaces()
 		if len(s.cur) > 0 && s.cur[0] == ',' {
 			s.cur = s.cur[1:]
-			s.SkipSpaces()
+			s.skipSpaces()
 		}
 	}
 }
 
-func (s *DecodeState) DecodeObject() map[string]interface{} {
+func (s *decodeState) decodeObject() map[string]interface{} {
 	obj := make(map[string]interface{}, PreallocateObjectElems)
 
 	for {
-		s.SkipSpaces()
+		s.skipSpaces()
 
 		if len(s.cur) == 0 {
 			s.err = fmt.Errorf("incorrect syntax")
@@ -80,19 +80,19 @@ func (s *DecodeState) DecodeObject() map[string]interface{} {
 			return obj
 		case '"':
 			s.cur = s.cur[1:]
-			key := s.DecodeString()
+			key := s.decodeString()
 			if s.err != nil {
 				return obj
 			}
-			s.SkipSpaces()
+			s.skipSpaces()
 			if len(s.cur) > 0 && s.cur[0] == ':' {
 				s.cur = s.cur[1:]
 			} else {
 				s.err = fmt.Errorf("incorrect syntax (expect ':' after key)")
 				return obj
 			}
-			obj[key] = s.DecodeValue()
-			s.SkipSpaces()
+			obj[key] = s.decodeValue()
+			s.skipSpaces()
 			if len(s.cur) > 0 && s.cur[0] == ',' {
 				s.cur = s.cur[1:]
 			}
@@ -105,7 +105,7 @@ func (s *DecodeState) DecodeObject() map[string]interface{} {
 	return obj
 }
 
-func (s *DecodeState) DecodeString() string {
+func (s *decodeState) decodeString() string {
 	quotePos := strings.IndexByte(s.cur, '"')
 	if quotePos < 0 {
 		s.err = fmt.Errorf("incorrect syntax (expected close quote)")
@@ -121,7 +121,7 @@ func (s *DecodeState) DecodeString() string {
 	return ""
 }
 
-func (s *DecodeState) DecodeNumber() float64 {
+func (s *decodeState) decodeNumber() float64 {
 	var pos int = 0
 
 	// sign
@@ -184,8 +184,8 @@ func (s *DecodeState) DecodeNumber() float64 {
 	return val
 }
 
-func (s *DecodeState) DecodeValue() interface{} {
-	s.SkipSpaces()
+func (s *decodeState) decodeValue() interface{} {
+	s.skipSpaces()
 	if len(s.cur) == 0 {
 		s.err = fmt.Errorf("incorrect syntax")
 		return nil
@@ -193,7 +193,7 @@ func (s *DecodeState) DecodeValue() interface{} {
 	switch s.cur[0] {
 	case '"':
 		s.cur = s.cur[1:]
-		val := s.DecodeString()
+		val := s.decodeString()
 		if s.err != nil {
 			return nil
 		} else {
@@ -201,7 +201,7 @@ func (s *DecodeState) DecodeValue() interface{} {
 		}
 	case '{':
 		s.cur = s.cur[1:]
-		val := s.DecodeObject()
+		val := s.decodeObject()
 		if s.err != nil {
 			return nil
 		} else {
@@ -209,14 +209,14 @@ func (s *DecodeState) DecodeValue() interface{} {
 		}
 	case '[':
 		s.cur = s.cur[1:]
-		val := s.DecodeSlice()
+		val := s.decodeSlice()
 		if s.err != nil {
 			return nil
 		} else {
 			return val
 		}
 	case '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
-		val := s.DecodeNumber()
+		val := s.decodeNumber()
 		if s.err != nil {
 			return nil
 		} else {
@@ -250,7 +250,7 @@ func (s *DecodeState) DecodeValue() interface{} {
 }
 
 func Decode(json string) (interface{}, error) {
-	state := DecodeState{cur: json}
-	ret := state.DecodeValue()
+	state := decodeState{cur: json}
+	ret := state.decodeValue()
 	return ret, state.err
 }
