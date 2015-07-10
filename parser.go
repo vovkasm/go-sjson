@@ -11,6 +11,54 @@ type DecodeState struct {
 	err error
 }
 
+func (s *DecodeState) SkipSpaces() {
+	for {
+		if len(s.cur) == 0 {
+			break
+		}
+		ch := s.cur[0]
+		if ch == '\x20' || ch == '\x0A' || ch == '\x0D' || ch == '\x09' {
+			s.cur = s.cur[1:]
+		} else {
+			break
+		}
+	}
+}
+
+func (s *DecodeState) DecodeObject() interface{} {
+	s.SkipSpaces()
+
+	if len(s.cur) == 0 {
+		s.err = fmt.Errorf("incorrect syntax")
+		return nil
+	}
+
+	obj := map[string]interface{}{}
+
+	return obj
+}
+
+func (s *DecodeState) DecodeString() interface{} {
+	if len(s.cur) == 0 {
+		s.err = fmt.Errorf("incorrect syntax")
+		return nil
+	}
+
+	quotePos := bytes.IndexByte(s.cur, '"')
+	if quotePos < 0 {
+		s.err = fmt.Errorf("incorrect syntax (expected close quote)")
+		return nil
+	}
+	// fast path
+	if bytes.IndexByte(s.cur[:quotePos], '\\') < 0 {
+		val := s.cur[:quotePos]
+		s.cur = s.cur[quotePos+1:]
+		return string(val)
+	}
+
+	return ""
+}
+
 func (s *DecodeState) DecodeNumber() interface{} {
 	var pos int = 0
 
@@ -74,11 +122,18 @@ func (s *DecodeState) DecodeNumber() interface{} {
 }
 
 func (s *DecodeState) DecodeValue() interface{} {
+	s.SkipSpaces()
 	if len(s.cur) == 0 {
 		s.err = fmt.Errorf("incorrect syntax")
 		return nil
 	}
 	switch s.cur[0] {
+	case '"':
+		s.cur = s.cur[1:]
+		return s.DecodeString()
+	case '{':
+		s.cur = s.cur[1:]
+		return s.DecodeObject()
 	case '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
 		return s.DecodeNumber()
 	case 't':

@@ -37,6 +37,12 @@ var _ = Describe("parser", func() {
 		{"errors in numbers", `-0.`, BeNil(), `incorrect number`},
 		{"errors in numbers", `-0e`, BeNil(), `incorrect number`},
 		{"errors in numbers", `-e+1`, BeNil(), `incorrect number`},
+		// strings
+		{"can decode empty string", `""`, Equal(""), ``},
+		{"can decode simple string", `"abc"`, Equal("abc"), ``},
+		{"errors in strings", `"ab`, BeNil(), `incorrect syntax`},
+		// objects
+		{"can decode empty object", `{}`, Equal(map[string]interface{}{}), ``},
 	}
 	for n, t := range table {
 		n, t := n, t
