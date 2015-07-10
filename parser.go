@@ -6,6 +6,11 @@ import (
 	"strings"
 )
 
+var (
+	PreallocateSliceElems  = 2
+	PreallocateObjectElems = 2
+)
+
 type DecodeState struct {
 	cur string // current bytes
 	err error
@@ -30,7 +35,7 @@ func (s *DecodeState) SkipSpaces() {
 }
 
 func (s *DecodeState) DecodeSlice() []interface{} {
-	arr := make([]interface{}, 0, 2)
+	arr := make([]interface{}, 0, PreallocateSliceElems)
 
 	s.SkipSpaces()
 	for {
@@ -59,7 +64,7 @@ func (s *DecodeState) DecodeSlice() []interface{} {
 }
 
 func (s *DecodeState) DecodeObject() map[string]interface{} {
-	obj := make(map[string]interface{}, 2)
+	obj := make(map[string]interface{}, PreallocateObjectElems)
 
 	for {
 		s.SkipSpaces()
