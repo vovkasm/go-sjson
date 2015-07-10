@@ -12,15 +12,19 @@ type DecodeState struct {
 }
 
 func (s *DecodeState) SkipSpaces() {
+	if len(s.cur) == 0 {
+		return
+	}
 	for {
-		if len(s.cur) == 0 {
-			break
-		}
-		ch := s.cur[0]
-		if ch == '\x20' || ch == '\x0A' || ch == '\x0D' || ch == '\x09' {
+		if s.cur[0] > '\x20' {
+			return
+		} else if s.cur[0] == '\x20' || s.cur[0] == '\x0A' || s.cur[0] == '\x0D' || s.cur[0] == '\x09' {
 			s.cur = s.cur[1:]
+			if len(s.cur) == 0 {
+				return
+			}
 		} else {
-			break
+			return
 		}
 	}
 }
@@ -97,21 +101,16 @@ func (s *DecodeState) DecodeObject() interface{} {
 }
 
 func (s *DecodeState) DecodeString() interface{} {
-	if len(s.cur) == 0 {
-		s.err = fmt.Errorf("incorrect syntax")
-		return nil
-	}
-
 	quotePos := strings.IndexByte(s.cur, '"')
 	if quotePos < 0 {
 		s.err = fmt.Errorf("incorrect syntax (expected close quote)")
 		return nil
 	}
 	// fast path
-	if strings.IndexByte(s.cur[:quotePos], '\\') < 0 {
-		val := s.cur[:quotePos]
+	val := s.cur[:quotePos]
+	if strings.IndexByte(val, '\\') < 0 {
 		s.cur = s.cur[quotePos+1:]
-		return string(val)
+		return val
 	}
 
 	return ""
