@@ -25,6 +25,35 @@ func (s *DecodeState) SkipSpaces() {
 	}
 }
 
+func (s *DecodeState) DecodeSlice() interface{} {
+	arr := []interface{}{}
+
+	s.SkipSpaces()
+	for {
+		if len(s.cur) == 0 {
+			s.err = fmt.Errorf("incorrect syntax")
+			return nil
+		}
+
+		if s.cur[0] == ']' {
+			s.cur = s.cur[1:]
+			return arr
+		}
+
+		val := s.DecodeValue()
+		if s.err != nil {
+			return nil
+		}
+		arr = append(arr, val)
+
+		s.SkipSpaces()
+		if len(s.cur) > 0 && s.cur[0] == ',' {
+			s.cur = s.cur[1:]
+			s.SkipSpaces()
+		}
+	}
+}
+
 func (s *DecodeState) DecodeObject() interface{} {
 	obj := map[string]interface{}{}
 
@@ -164,6 +193,9 @@ func (s *DecodeState) DecodeValue() interface{} {
 	case '{':
 		s.cur = s.cur[1:]
 		return s.DecodeObject()
+	case '[':
+		s.cur = s.cur[1:]
+		return s.DecodeSlice()
 	case '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
 		return s.DecodeNumber()
 	case 't':
