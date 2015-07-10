@@ -29,14 +29,14 @@ func (s *DecodeState) SkipSpaces() {
 	}
 }
 
-func (s *DecodeState) DecodeSlice() interface{} {
+func (s *DecodeState) DecodeSlice() []interface{} {
 	arr := make([]interface{}, 0, 2)
 
 	s.SkipSpaces()
 	for {
 		if len(s.cur) == 0 {
 			s.err = fmt.Errorf("incorrect syntax")
-			return nil
+			return arr
 		}
 
 		if s.cur[0] == ']' {
@@ -46,7 +46,7 @@ func (s *DecodeState) DecodeSlice() interface{} {
 
 		val := s.DecodeValue()
 		if s.err != nil {
-			return nil
+			return arr
 		}
 		arr = append(arr, val)
 
@@ -58,7 +58,7 @@ func (s *DecodeState) DecodeSlice() interface{} {
 	}
 }
 
-func (s *DecodeState) DecodeObject() interface{} {
+func (s *DecodeState) DecodeObject() map[string]interface{} {
 	obj := make(map[string]interface{}, 2)
 
 	for {
@@ -66,7 +66,7 @@ func (s *DecodeState) DecodeObject() interface{} {
 
 		if len(s.cur) == 0 {
 			s.err = fmt.Errorf("incorrect syntax")
-			return nil
+			return obj
 		}
 
 		switch s.cur[0] {
@@ -77,34 +77,34 @@ func (s *DecodeState) DecodeObject() interface{} {
 			s.cur = s.cur[1:]
 			key := s.DecodeString()
 			if s.err != nil {
-				return nil
+				return obj
 			}
 			s.SkipSpaces()
 			if len(s.cur) > 0 && s.cur[0] == ':' {
 				s.cur = s.cur[1:]
 			} else {
 				s.err = fmt.Errorf("incorrect syntax (expect ':' after key)")
-				return nil
+				return obj
 			}
-			obj[key.(string)] = s.DecodeValue()
+			obj[key] = s.DecodeValue()
 			s.SkipSpaces()
 			if len(s.cur) > 0 && s.cur[0] == ',' {
 				s.cur = s.cur[1:]
 			}
 		default:
 			s.err = fmt.Errorf("incorrect syntax (expect object key)")
-			return nil
+			return obj
 		}
 	}
 
 	return obj
 }
 
-func (s *DecodeState) DecodeString() interface{} {
+func (s *DecodeState) DecodeString() string {
 	quotePos := strings.IndexByte(s.cur, '"')
 	if quotePos < 0 {
 		s.err = fmt.Errorf("incorrect syntax (expected close quote)")
-		return nil
+		return ""
 	}
 	// fast path
 	val := s.cur[:quotePos]
@@ -116,7 +116,7 @@ func (s *DecodeState) DecodeString() interface{} {
 	return ""
 }
 
-func (s *DecodeState) DecodeNumber() interface{} {
+func (s *DecodeState) DecodeNumber() float64 {
 	var pos int = 0
 
 	// sign
@@ -135,7 +135,7 @@ func (s *DecodeState) DecodeNumber() interface{} {
 		pos++
 	} else {
 		s.err = fmt.Errorf("incorrect number (expected digit)")
-		return nil
+		return 0.0
 	}
 
 	// - fractional
@@ -148,7 +148,7 @@ func (s *DecodeState) DecodeNumber() interface{} {
 			}
 		} else {
 			s.err = fmt.Errorf("incorrect number (expected fractional)")
-			return nil
+			return 0.0
 		}
 	}
 
@@ -166,7 +166,7 @@ func (s *DecodeState) DecodeNumber() interface{} {
 			}
 		} else {
 			s.err = fmt.Errorf("incorrect number (expected digit)")
-			return nil
+			return 0.0
 		}
 	}
 
@@ -188,15 +188,35 @@ func (s *DecodeState) DecodeValue() interface{} {
 	switch s.cur[0] {
 	case '"':
 		s.cur = s.cur[1:]
-		return s.DecodeString()
+		val := s.DecodeString()
+		if s.err != nil {
+			return nil
+		} else {
+			return val
+		}
 	case '{':
 		s.cur = s.cur[1:]
-		return s.DecodeObject()
+		val := s.DecodeObject()
+		if s.err != nil {
+			return nil
+		} else {
+			return val
+		}
 	case '[':
 		s.cur = s.cur[1:]
-		return s.DecodeSlice()
+		val := s.DecodeSlice()
+		if s.err != nil {
+			return nil
+		} else {
+			return val
+		}
 	case '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
-		return s.DecodeNumber()
+		val := s.DecodeNumber()
+		if s.err != nil {
+			return nil
+		} else {
+			return val
+		}
 	case 't':
 		if len(s.cur) >= 4 && s.cur[:4] == "true" {
 			s.cur = s.cur[4:]
