@@ -10,13 +10,20 @@ var sample = []byte(`[1434751206.666,"127.0.0.1",[{"site":"Odnolalalalali","uniq
 var result interface{}
 
 func BenchmarkSimple(b *testing.B) {
+	var err error
 	for n := 0; n < b.N; n++ {
-		result, _ = json.Decode(sample)
+		result, err = json.Decode(sample)
+		if err != nil {
+			b.Fatalf("Error in json: %v\n", err)
+		}
 	}
 }
 
 func BenchmarkStd(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		std.Unmarshal(sample, result)
+		err := std.Unmarshal(sample, &result)
+		if err != nil {
+			b.Fatalf("Error in json: %v\n", err)
+		}
 	}
 }
