@@ -43,6 +43,10 @@ var _ = Describe("parser", func() {
 		{"errors in strings", `"ab`, BeNil(), `incorrect syntax`},
 		// objects
 		{"can decode empty object", `{}`, Equal(map[string]interface{}{}), ``},
+		{"can decode simple object", `{"key1":"val1"}`, Equal(map[string]interface{}{"key1": "val1"}), ``},
+		{"can decode simple object", `{"key1":"val1","key2":"val2"}`, Equal(map[string]interface{}{"key1": "val1", "key2": "val2"}), ``},
+		{"can decode simple object", ` { "key1" : 10 , "key2" : true } `, Equal(map[string]interface{}{"key1": 10.0, "key2": true}), ``},
+		{"can decode nested objects", `{"k1":{"kk1":10}}`, Equal(map[string]interface{}{"k1": map[string]interface{}{"kk1": 10.0}}), ``},
 	}
 	for n, t := range table {
 		n, t := n, t

@@ -26,14 +26,43 @@ func (s *DecodeState) SkipSpaces() {
 }
 
 func (s *DecodeState) DecodeObject() interface{} {
-	s.SkipSpaces()
-
-	if len(s.cur) == 0 {
-		s.err = fmt.Errorf("incorrect syntax")
-		return nil
-	}
-
 	obj := map[string]interface{}{}
+
+	for {
+		s.SkipSpaces()
+
+		if len(s.cur) == 0 {
+			s.err = fmt.Errorf("incorrect syntax")
+			return nil
+		}
+
+		switch s.cur[0] {
+		case '}':
+			s.cur = s.cur[1:]
+			return obj
+		case '"':
+			s.cur = s.cur[1:]
+			key := s.DecodeString()
+			s.SkipSpaces()
+			if len(s.cur) > 0 && s.cur[0] == ':' {
+				s.cur = s.cur[1:]
+			} else {
+				s.err = fmt.Errorf("incorrect syntax (expect ':' after key)")
+				return nil
+			}
+			val := s.DecodeValue()
+			if strKey, ok := key.(string); ok {
+				obj[strKey] = val
+			}
+			s.SkipSpaces()
+			if len(s.cur) > 0 && s.cur[0] == ',' {
+				s.cur = s.cur[1:]
+			}
+		default:
+			s.err = fmt.Errorf("incorrect syntax (expect object key)")
+			return nil
+		}
+	}
 
 	return obj
 }
@@ -117,6 +146,7 @@ func (s *DecodeState) DecodeNumber() interface{} {
 	if err != nil {
 		s.err = err
 	}
+	s.cur = s.cur[pos:]
 
 	return val
 }
