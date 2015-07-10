@@ -48,6 +48,7 @@ var _ = Describe("parser", func() {
 		{"can decode simple object", `{"key1":"val1","key2":"val2"}`, Equal(map[string]interface{}{"key1": "val1", "key2": "val2"}), ``},
 		{"can decode simple object", ` { "key1" : 10 , "key2" : true } `, Equal(map[string]interface{}{"key1": 10.0, "key2": true}), ``},
 		{"can decode nested objects", `{"k1":{"kk1":10}}`, Equal(map[string]interface{}{"k1": map[string]interface{}{"kk1": 10.0}}), ``},
+		{"errors in objects", `{"k1:`, BeNil(), `incorrect syntax`},
 		// arrays
 		{"can decode empty array", `[]`, Equal([]interface{}{}), ``},
 		{"can decode simple array", `[10,20]`, Equal([]interface{}{10.0, 20.0}), ``},

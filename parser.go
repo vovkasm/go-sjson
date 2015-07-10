@@ -30,7 +30,7 @@ func (s *DecodeState) SkipSpaces() {
 }
 
 func (s *DecodeState) DecodeSlice() interface{} {
-	arr := []interface{}{}
+	arr := make([]interface{}, 0, 2)
 
 	s.SkipSpaces()
 	for {
@@ -59,7 +59,7 @@ func (s *DecodeState) DecodeSlice() interface{} {
 }
 
 func (s *DecodeState) DecodeObject() interface{} {
-	obj := map[string]interface{}{}
+	obj := make(map[string]interface{}, 2)
 
 	for {
 		s.SkipSpaces()
@@ -76,6 +76,9 @@ func (s *DecodeState) DecodeObject() interface{} {
 		case '"':
 			s.cur = s.cur[1:]
 			key := s.DecodeString()
+			if s.err != nil {
+				return nil
+			}
 			s.SkipSpaces()
 			if len(s.cur) > 0 && s.cur[0] == ':' {
 				s.cur = s.cur[1:]
@@ -83,10 +86,7 @@ func (s *DecodeState) DecodeObject() interface{} {
 				s.err = fmt.Errorf("incorrect syntax (expect ':' after key)")
 				return nil
 			}
-			val := s.DecodeValue()
-			if strKey, ok := key.(string); ok {
-				obj[strKey] = val
-			}
+			obj[key.(string)] = s.DecodeValue()
 			s.SkipSpaces()
 			if len(s.cur) > 0 && s.cur[0] == ',' {
 				s.cur = s.cur[1:]
