@@ -1,12 +1,12 @@
-package json_test
+package sjson_test
 
 import (
-	std "encoding/json"
+	"encoding/json"
 	"fmt"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
-	"github.com/vovkasm/go-simplejson"
+	"github.com/vovkasm/go-sjson"
 	"testing"
 )
 
@@ -63,7 +63,7 @@ var _ = Describe("parser", func() {
 		n, t := n, t
 		Context(fmt.Sprintf("test %d", n), func() {
 			It(t.Descr, func() {
-				res, err := json.Decode(t.In)
+				res, err := sjson.Decode(t.In)
 				if len(t.Err) == 0 {
 					Expect(err).To(Succeed())
 				} else {
@@ -78,10 +78,10 @@ var _ = Describe("parser", func() {
 	}
 	Context("real data test", func() {
 		It("should produce equivalent json after reencoding", func() {
-			sample := `[1434751206.666,"127.0.0.1",[{"site":"Odnolalalalali","uniq2":"db","env":"Canvas","value":"0","project":"SuperGame","type":"VIRAL.requestSuccess.notification_sns","uniq1":"friend_touch"},{"env":"Canvas","value":1,"project":"SuperGame","uniq2":"db","type":"VIRAL.requestFailed.notification_sns","uniq1":"friend_touch","site":"Odnolalalalali"},{"site":"Odnolalalalali","type":"VIRAL.requestInvalid.notification_sns","uniq1":"friend_touch","uniq2":"db","env":"Canvas","value":"0","project":"SuperGame"},{"type":"Viral.requestShortened.notification_sns","uniq1":"friend_touch","env":"Canvas","uniq2":"text","value":100,"project":"SuperGame","site":"Odnolalalalali"}]]`
-			res, err := json.Decode(sample)
+			//sample := `[1434751206.666,"127.0.0.1",[{"site":"Odnolalalalali","uniq2":"db","env":"Canvas","value":"0","project":"SuperGame","type":"VIRAL.requestSuccess.notification_sns","uniq1":"friend_touch"},{"env":"Canvas","value":1,"project":"SuperGame","uniq2":"db","type":"VIRAL.requestFailed.notification_sns","uniq1":"friend_touch","site":"Odnolalalalali"},{"site":"Odnolalalalali","type":"VIRAL.requestInvalid.notification_sns","uniq1":"friend_touch","uniq2":"db","env":"Canvas","value":"0","project":"SuperGame"},{"type":"Viral.requestShortened.notification_sns","uniq1":"friend_touch","env":"Canvas","uniq2":"text","value":100,"project":"SuperGame","site":"Odnolalalalali"}]]`
+			res, err := sjson.Decode(sample)
 			Expect(err).To(Succeed())
-			enc, err := std.Marshal(res)
+			enc, err := json.Marshal(res)
 			Expect(err).To(Succeed())
 			Expect(enc).To(MatchJSON(sample))
 		})

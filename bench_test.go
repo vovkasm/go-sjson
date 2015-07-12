@@ -1,8 +1,8 @@
-package json_test
+package sjson_test
 
 import (
-	std "encoding/json"
-	"github.com/vovkasm/go-simplejson"
+	"encoding/json"
+	"github.com/vovkasm/go-sjson"
 	"testing"
 )
 
@@ -10,8 +10,9 @@ var sample = `[1434751206.666,"127.0.0.1",[{"site":"Odnolalalalali","uniq2":"db"
 var result interface{}
 
 func BenchmarkSimple(b *testing.B) {
+	data := sample
 	for n := 0; n < b.N; n++ {
-		r, err := json.Decode(sample)
+		r, err := sjson.Decode(data)
 		if err != nil {
 			b.Fatalf("Error in json: %v\n", err)
 		}
@@ -20,10 +21,10 @@ func BenchmarkSimple(b *testing.B) {
 }
 
 func BenchmarkStd(b *testing.B) {
-	json := []byte(sample)
+	data := []byte(sample)
 	for n := 0; n < b.N; n++ {
 		var r interface{}
-		err := std.Unmarshal(json, &r)
+		err := json.Unmarshal(data, &r)
 		if err != nil {
 			b.Fatalf("Error in json: %v\n", err)
 		}
