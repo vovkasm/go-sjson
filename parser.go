@@ -138,6 +138,7 @@ func (s *decodeState) decodeString() string {
 		return val
 	}
 
+	// TODO(vovkasm): rewrite from zero
 	// full decoding
 	// - find end of string
 	for s.cur[quotePos-1] == '\\' {
