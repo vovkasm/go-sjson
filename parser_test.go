@@ -12,7 +12,7 @@ import (
 
 func TestDict(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "simplejson")
+	RunSpecs(t, "sjson")
 }
 
 var _ = Describe("parser", func() {
@@ -87,3 +87,13 @@ var _ = Describe("parser", func() {
 		})
 	})
 })
+
+func Example() {
+	data := `{"name":"John","age":30}`
+	obj, err := sjson.Decode(data)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("Hi, %s!\n", obj.(map[string]interface{})["name"])
+	// Output: Hi, John!
+}

@@ -9,10 +9,27 @@ import (
 	"unicode/utf8"
 )
 
+// PreallocateSliceElems and PreallocateObjectElems parameters allow fine tune
+// preallocated memory for slices and objects during the parsing process.
 var (
 	PreallocateSliceElems  = 2
 	PreallocateObjectElems = 2
 )
+
+// Decode function parse JSON Text into interface value. Rules the same as in
+// encoding/json module:
+//	bool, for JSON booleans
+//	float64, for JSON numbers
+//	string, for JSON strings
+//	[]interface{}, for JSON arrays
+//	map[string]interface{}, for JSON objects
+//	nil, for JSON null
+//
+func Decode(json string) (interface{}, error) {
+	state := decodeState{cur: json}
+	ret := state.decodeValue()
+	return ret, state.err
+}
 
 type decodeState struct {
 	cur string // current bytes
@@ -397,10 +414,4 @@ func (s *decodeState) decodeValue() interface{} {
 		s.err = fmt.Errorf("incorrect syntax")
 	}
 	return nil
-}
-
-func Decode(json string) (interface{}, error) {
-	state := decodeState{cur: json}
-	ret := state.decodeValue()
-	return ret, state.err
 }
