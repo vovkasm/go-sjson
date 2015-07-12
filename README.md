@@ -2,11 +2,13 @@
 Fast and simple JSON parser for Go
 
 Package sjson provides decoding of JSON Text as defined in [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
-
 Sjson designed to be fast and simple, for now it supports only dynamic deserialization.
 Simple benchmark shows ~2x speedup against encoding/json standard parser.
-	BenchmarkSimple   300000             10216 ns/op
-	BenchmarkStd      200000             22413 ns/op
+
+```
+ BenchmarkSimple   300000             10216 ns/op
+ BenchmarkStd      200000             22413 ns/op
+```
 
 ## Links
 
