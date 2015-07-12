@@ -41,6 +41,12 @@ var _ = Describe("parser", func() {
 		// strings
 		{"can decode empty string", `""`, Equal(""), ``},
 		{"can decode simple string", `"abc"`, Equal("abc"), ``},
+		{"can decode unicode", `"ü"`, Equal("ü"), ``},
+		{"can decode escapes", `"\""`, Equal(`"`), ``},
+		{"can decode escapes2", `"\u00FC"`, Equal("\u00fc"), ``},
+		{"can decode escapes3", `"\u002F\u002f\//"`, Equal("////"), ``},
+		{"can decode escapes3", `"\u3042"`, Equal(`あ`), ``},                          // Japanese "a"
+		{"can decode escapes from extended range", `"\ud800\udd40"`, Equal("𐅀"), ``}, // Greek Acrophonic Attic One Quarter
 		{"errors in strings", `"ab`, BeNil(), `incorrect syntax`},
 		// objects
 		{"can decode empty object", `{}`, Equal(map[string]interface{}{}), ``},
