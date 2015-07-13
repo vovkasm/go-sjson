@@ -16,7 +16,7 @@ var (
 	PreallocateObjectElems = 2
 )
 
-// Decode function parse JSON Text into interface value. Rules the same as in
+// Decode function parse JSON Text into interface value. Rules are the same as in
 // encoding/json module:
 //	bool, for JSON booleans
 //	float64, for JSON numbers
