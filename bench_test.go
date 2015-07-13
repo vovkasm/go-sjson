@@ -1,8 +1,11 @@
 package sjson_test
 
 import (
+	"compress/gzip"
 	"encoding/json"
 	"github.com/vovkasm/go-sjson"
+	"io/ioutil"
+	"os"
 	"testing"
 )
 
@@ -58,4 +61,58 @@ func benchStdjsn(b *testing.B, data string) {
 		result = r
 	}
 	b.SetBytes(int64(len(data)))
+}
+
+var codeJSON []byte
+var codeJSONStr string
+
+func codeInit() {
+	f, err := os.Open("testdata/code.json.gz")
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+	gz, err := gzip.NewReader(f)
+	if err != nil {
+		panic(err)
+	}
+	data, err := ioutil.ReadAll(gz)
+	if err != nil {
+		panic(err)
+	}
+
+	codeJSON = data
+	codeJSONStr = string(data)
+}
+
+func BenchmarkCode_sjson(b *testing.B) {
+	if codeJSON == nil {
+		b.StopTimer()
+		codeInit()
+		b.StartTimer()
+	}
+	for i := 0; i < b.N; i++ {
+		r, err := sjson.Decode(codeJSONStr)
+		if err != nil {
+			b.Fatal("Unmmarshal:", err)
+		}
+		result = r
+	}
+	b.SetBytes(int64(len(codeJSON)))
+}
+
+func BenchmarkCode__json(b *testing.B) {
+	if codeJSON == nil {
+		b.StopTimer()
+		codeInit()
+		b.StartTimer()
+	}
+	for i := 0; i < b.N; i++ {
+		var r interface{}
+		if err := json.Unmarshal(codeJSON, &r); err != nil {
+			b.Fatal("Unmmarshal:", err)
+		}
+		result = r
+	}
+	b.SetBytes(int64(len(codeJSON)))
 }

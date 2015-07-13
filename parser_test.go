@@ -85,6 +85,16 @@ var _ = Describe("parser", func() {
 			Expect(err).To(Succeed())
 			Expect(enc).To(MatchJSON(sample))
 		})
+		It("should correctly decode encoding/json test", func() {
+			if codeJSON == nil {
+				codeInit()
+			}
+			res, err := sjson.Decode(codeJSONStr)
+			Expect(err).To(Succeed())
+			enc, err := json.Marshal(res)
+			Expect(err).To(Succeed())
+			Expect(enc).To(MatchJSON(codeJSONStr))
+		})
 	})
 })
 
