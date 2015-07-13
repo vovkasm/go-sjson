@@ -37,17 +37,11 @@ type decodeState struct {
 }
 
 func (s *decodeState) skipSpaces() {
-	if len(s.cur) == 0 {
-		return
-	}
-	for {
+	for len(s.cur) > 0 {
 		if s.cur[0] > '\x20' {
 			return
 		} else if s.cur[0] == '\x20' || s.cur[0] == '\x0A' || s.cur[0] == '\x0D' || s.cur[0] == '\x09' {
 			s.cur = s.cur[1:]
-			if len(s.cur) == 0 {
-				return
-			}
 		} else {
 			return
 		}
