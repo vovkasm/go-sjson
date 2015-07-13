@@ -15,7 +15,7 @@ Some useful links.
 
 Thanks
 
-Development of the project was sponsored by "Crazy Panda" (http://cpdecision.com)
+Development of the project was sponsored by CP Decision LLC (http://cpdecision.com)
 as part of a project on processing statistical data.
 
 Some ideas was borrowed from excellent Marc A. Lehmann's JSON::XS code.
