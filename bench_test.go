@@ -19,8 +19,8 @@ var (
 
 var result interface{}
 
-func Benchmark_sjson(b *testing.B)           { benchSimple(b, sample) }
-func Benchmark__json(b *testing.B)           { benchStdjsn(b, sample) }
+func BenchmarkSample_sjson(b *testing.B)     { benchSimple(b, sample) }
+func BenchmarkSample__json(b *testing.B)     { benchStdjsn(b, sample) }
 func BenchmarkFastString_sjson(b *testing.B) { benchSimple(b, sampleStringFast) }
 func BenchmarkFastString__json(b *testing.B) { benchStdjsn(b, sampleStringFast) }
 func BenchmarkEscString_sjson(b *testing.B)  { benchSimple(b, sampleStringEsc) }
@@ -44,6 +44,7 @@ func benchSimple(b *testing.B, data string) {
 		}
 		result = r
 	}
+	b.SetBytes(int64(len(data)))
 }
 
 func benchStdjsn(b *testing.B, data string) {
@@ -56,4 +57,5 @@ func benchStdjsn(b *testing.B, data string) {
 		}
 		result = r
 	}
+	b.SetBytes(int64(len(data)))
 }
