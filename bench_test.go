@@ -14,6 +14,7 @@ var (
 	sampleNum        = `123.45e-2`
 	sampleObject     = `{"key1":"val1","key2":123}`
 	sampleArray      = `[true,false,true,false,true,false]`
+	sampleArrayLong  = `[true,false,true,false,true,false,true,false,true,false,true,false]`
 )
 
 var result interface{}
@@ -32,6 +33,8 @@ func BenchmarkObject_sjson(b *testing.B)     { benchSimple(b, sampleObject) }
 func BenchmarkObject__json(b *testing.B)     { benchStdjsn(b, sampleObject) }
 func BenchmarkArray_sjson(b *testing.B)      { benchSimple(b, sampleArray) }
 func BenchmarkArray__json(b *testing.B)      { benchStdjsn(b, sampleArray) }
+func BenchmarkArrayLong_sjson(b *testing.B)  { benchSimple(b, sampleArrayLong) }
+func BenchmarkArrayLong__json(b *testing.B)  { benchStdjsn(b, sampleArrayLong) }
 
 func benchSimple(b *testing.B, data string) {
 	for n := 0; n < b.N; n++ {

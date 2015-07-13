@@ -58,6 +58,7 @@ var _ = Describe("parser", func() {
 		// arrays
 		{"can decode empty array", `[]`, Equal([]interface{}{}), ``},
 		{"can decode simple array", `[10,20]`, Equal([]interface{}{10.0, 20.0}), ``},
+		{"can decode long array", ` [ 10 , 20 , 30 , 40 , 50 , 60 , 70 , 80 , 90 , 100 ] `, Equal([]interface{}{10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0}), ``},
 	}
 	for n, t := range table {
 		n, t := n, t

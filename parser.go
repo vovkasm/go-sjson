@@ -9,12 +9,9 @@ import (
 	"unicode/utf8"
 )
 
-// PreallocateSliceElems and PreallocateObjectElems parameters allow fine tune
-// preallocated memory for slices and objects during the parsing process.
-var (
-	PreallocateSliceElems  = 2
-	PreallocateObjectElems = 2
-)
+// PreallocateObjectElems parameter allow to tune
+// preallocated memory objects during the parsing process.
+var PreallocateObjectElems = 2
 
 // Decode function parse JSON Text into interface value. Rules are the same as in
 // encoding/json module:
@@ -48,16 +45,39 @@ func (s *decodeState) skipSpaces() {
 	}
 }
 
+const arr0Size int = 8
+
 func (s *decodeState) decodeSlice() []interface{} {
-	arr := make([]interface{}, 0, PreallocateSliceElems)
+	var arr0 [arr0Size]interface{}
+	var i int
 
 	s.skipSpaces()
-	for {
-		if len(s.cur) == 0 {
-			s.err = fmt.Errorf("incorrect syntax")
-			return arr
+	for len(s.cur) > 0 {
+		if s.cur[0] == ']' {
+			s.cur = s.cur[1:]
+			return arr0[:i]
 		}
 
+		val := s.decodeValue()
+		if s.err != nil {
+			return arr0[:i]
+		}
+		arr0[i] = val
+		i++
+
+		s.skipSpaces()
+		if len(s.cur) > 0 && s.cur[0] == ',' {
+			s.cur = s.cur[1:]
+			s.skipSpaces()
+			if i >= arr0Size {
+				break
+			}
+		}
+	}
+
+	arr := arr0[:]
+
+	for len(s.cur) > 0 {
 		if s.cur[0] == ']' {
 			s.cur = s.cur[1:]
 			return arr
@@ -75,6 +95,9 @@ func (s *decodeState) decodeSlice() []interface{} {
 			s.skipSpaces()
 		}
 	}
+
+	s.err = fmt.Errorf("incorrect syntax")
+	return arr
 }
 
 func (s *decodeState) decodeObject() map[string]interface{} {
