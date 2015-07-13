@@ -329,7 +329,9 @@ func (s *decodeState) decodeNumber() float64 {
 	}
 
 	// - fractional
+	var slowParsing bool
 	if len(s.cur) > pos && s.cur[pos] == '.' {
+		slowParsing = true
 		pos++
 		if len(s.cur) > pos && s.cur[pos] >= '0' && s.cur[pos] <= '9' {
 			pos++
@@ -344,6 +346,7 @@ func (s *decodeState) decodeNumber() float64 {
 
 	// exponential
 	if len(s.cur) > pos && (s.cur[pos] == 'e' || s.cur[pos] == 'E') {
+		slowParsing = true
 		pos++
 		if len(s.cur) > pos && (s.cur[pos] == '+' || s.cur[pos] == '-') {
 			pos++
@@ -358,6 +361,47 @@ func (s *decodeState) decodeNumber() float64 {
 			s.err = fmt.Errorf("incorrect number (expected digit)")
 			return 0.0
 		}
+	}
+
+	if !slowParsing {
+		var acc int64
+		switch pos {
+		case 1:
+			acc = int64(s.cur[0] - '0')
+		case 2:
+			if s.cur[0] == '-' {
+				acc = -int64(s.cur[1] - '0')
+			} else {
+				acc = 10*int64(s.cur[0]-'0') + int64(s.cur[1]-'0')
+			}
+		case 3:
+			if s.cur[0] == '-' {
+				acc = -10*int64(s.cur[1]-'0') - int64(s.cur[2]-'0')
+			} else {
+				acc = 100*int64(s.cur[0]-'0') + 10*int64(s.cur[1]-'0') + int64(s.cur[2]-'0')
+			}
+		case 4:
+			if s.cur[0] == '-' {
+				acc = -100*int64(s.cur[1]-'0') - 10*int64(s.cur[2]-'0') - int64(s.cur[3]-'0')
+			} else {
+				acc = 1000*int64(s.cur[0]-'0') + 100*int64(s.cur[1]-'0') + 10*int64(s.cur[2]-'0') + int64(s.cur[3]-'0')
+			}
+		default:
+			i := pos - 1
+			var mul int64 = 1
+			for i > 0 {
+				acc += mul * int64(s.cur[i]-'0')
+				mul *= 10
+				i--
+			}
+			if s.cur[0] == '-' {
+				acc = -acc
+			} else {
+				acc += mul * int64(s.cur[0]-'0')
+			}
+		}
+		s.cur = s.cur[pos:]
+		return float64(acc)
 	}
 
 	val, err := strconv.ParseFloat(string(s.cur[:pos]), 64)
