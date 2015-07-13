@@ -306,11 +306,15 @@ func getu4(s []byte) rune {
 	return rune(r)
 }
 
+const charToNum64 int64 = 0x0F
+
 func (s *decodeState) decodeNumber() float64 {
 	var pos int = 0
+	var signMul int64 = 1
 
 	// sign
 	if s.cur[pos] == '-' {
+		signMul = -1
 		pos++
 	}
 
@@ -364,44 +368,31 @@ func (s *decodeState) decodeNumber() float64 {
 	}
 
 	if !slowParsing {
+		if signMul < 0 {
+			s.cur = s.cur[1:]
+			pos--
+		}
 		var acc int64
 		switch pos {
 		case 1:
-			acc = int64(s.cur[0] - '0')
+			acc = int64(s.cur[0]) & charToNum64
 		case 2:
-			if s.cur[0] == '-' {
-				acc = -int64(s.cur[1] - '0')
-			} else {
-				acc = 10*int64(s.cur[0]-'0') + int64(s.cur[1]-'0')
-			}
+			acc = 10*(int64(s.cur[0])&charToNum64) + (int64(s.cur[1]) & charToNum64)
 		case 3:
-			if s.cur[0] == '-' {
-				acc = -10*int64(s.cur[1]-'0') - int64(s.cur[2]-'0')
-			} else {
-				acc = 100*int64(s.cur[0]-'0') + 10*int64(s.cur[1]-'0') + int64(s.cur[2]-'0')
-			}
+			acc = 100*(int64(s.cur[0])&charToNum64) + 10*(int64(s.cur[1])&charToNum64) + int64(s.cur[2])&charToNum64
 		case 4:
-			if s.cur[0] == '-' {
-				acc = -100*int64(s.cur[1]-'0') - 10*int64(s.cur[2]-'0') - int64(s.cur[3]-'0')
-			} else {
-				acc = 1000*int64(s.cur[0]-'0') + 100*int64(s.cur[1]-'0') + 10*int64(s.cur[2]-'0') + int64(s.cur[3]-'0')
-			}
+			acc = 1000*(int64(s.cur[0])&charToNum64) + 100*(int64(s.cur[1])&charToNum64) + 10*(int64(s.cur[2])&charToNum64) + int64(s.cur[3])&charToNum64
 		default:
 			i := pos - 1
 			var mul int64 = 1
-			for i > 0 {
-				acc += mul * int64(s.cur[i]-'0')
+			for i >= 0 {
+				acc += mul * (int64(s.cur[i]) & charToNum64)
 				mul *= 10
 				i--
 			}
-			if s.cur[0] == '-' {
-				acc = -acc
-			} else {
-				acc += mul * int64(s.cur[0]-'0')
-			}
 		}
 		s.cur = s.cur[pos:]
-		return float64(acc)
+		return float64(signMul * acc)
 	}
 
 	val, err := strconv.ParseFloat(string(s.cur[:pos]), 64)
