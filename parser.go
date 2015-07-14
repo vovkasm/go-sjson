@@ -30,15 +30,16 @@ func Decode(json string) (interface{}, error) {
 
 type decodeState struct {
 	cur string // current bytes
+	off int    // current offset
 	err error
 }
 
 func (s *decodeState) skipSpaces() {
-	for len(s.cur) > 0 {
-		if s.cur[0] > '\x20' {
+	for len(s.cur) > s.off {
+		if s.cur[s.off] > '\x20' {
 			return
-		} else if s.cur[0] == '\x20' || s.cur[0] == '\x0A' || s.cur[0] == '\x0D' || s.cur[0] == '\x09' {
-			s.cur = s.cur[1:]
+		} else if s.cur[s.off] == '\x20' || s.cur[s.off] == '\x0A' || s.cur[s.off] == '\x0D' || s.cur[s.off] == '\x09' {
+			s.off++
 		} else {
 			return
 		}
@@ -52,9 +53,9 @@ func (s *decodeState) decodeSlice() []interface{} {
 	var i int
 
 	s.skipSpaces()
-	for len(s.cur) > 0 {
-		if s.cur[0] == ']' {
-			s.cur = s.cur[1:]
+	for len(s.cur) > s.off {
+		if s.cur[s.off] == ']' {
+			s.off++
 			return arr0[:i]
 		}
 
@@ -66,8 +67,8 @@ func (s *decodeState) decodeSlice() []interface{} {
 		i++
 
 		s.skipSpaces()
-		if len(s.cur) > 0 && s.cur[0] == ',' {
-			s.cur = s.cur[1:]
+		if len(s.cur) > s.off && s.cur[s.off] == ',' {
+			s.off++
 			s.skipSpaces()
 			if i >= arr0Size {
 				break
@@ -77,9 +78,9 @@ func (s *decodeState) decodeSlice() []interface{} {
 
 	arr := arr0[:]
 
-	for len(s.cur) > 0 {
-		if s.cur[0] == ']' {
-			s.cur = s.cur[1:]
+	for len(s.cur) > s.off {
+		if s.cur[s.off] == ']' {
+			s.off++
 			return arr
 		}
 
@@ -90,8 +91,8 @@ func (s *decodeState) decodeSlice() []interface{} {
 		arr = append(arr, val)
 
 		s.skipSpaces()
-		if len(s.cur) > 0 && s.cur[0] == ',' {
-			s.cur = s.cur[1:]
+		if len(s.cur) > s.off && s.cur[s.off] == ',' {
+			s.off++
 			s.skipSpaces()
 		}
 	}
@@ -106,32 +107,32 @@ func (s *decodeState) decodeObject() map[string]interface{} {
 	for {
 		s.skipSpaces()
 
-		if len(s.cur) == 0 {
-			s.err = fmt.Errorf("incorrect syntax")
+		if len(s.cur) <= s.off {
+			s.err = fmt.Errorf("incorrect syntax str:'%s' off:%d", s.cur, s.off)
 			return obj
 		}
 
-		switch s.cur[0] {
+		switch s.cur[s.off] {
 		case '}':
-			s.cur = s.cur[1:]
+			s.off++
 			return obj
 		case '"':
-			s.cur = s.cur[1:]
+			s.off++
 			key := s.decodeString()
 			if s.err != nil {
 				return obj
 			}
 			s.skipSpaces()
-			if len(s.cur) > 0 && s.cur[0] == ':' {
-				s.cur = s.cur[1:]
+			if len(s.cur) > s.off && s.cur[s.off] == ':' {
+				s.off++
 			} else {
 				s.err = fmt.Errorf("incorrect syntax (expect ':' after key)")
 				return obj
 			}
 			obj[key] = s.decodeValue()
 			s.skipSpaces()
-			if len(s.cur) > 0 && s.cur[0] == ',' {
-				s.cur = s.cur[1:]
+			if len(s.cur) > s.off && s.cur[s.off] == ',' {
+				s.off++
 			}
 		default:
 			s.err = fmt.Errorf("incorrect syntax (expect object key)")
@@ -143,32 +144,33 @@ func (s *decodeState) decodeObject() map[string]interface{} {
 }
 
 func (s *decodeState) decodeString() string {
-	quotePos := strings.IndexByte(s.cur, '"')
+	quotePos := strings.IndexByte(s.cur[s.off:], '"')
 	if quotePos < 0 {
 		s.err = fmt.Errorf("incorrect syntax (expected close quote)")
 		return ""
 	}
 	// fast path
-	val := s.cur[:quotePos]
+	val := s.cur[s.off : s.off+quotePos]
 	if strings.IndexByte(val, '\\') < 0 {
-		s.cur = s.cur[quotePos+1:]
+		s.off += quotePos + 1
 		return val
 	}
 
 	// TODO(vovkasm): rewrite from zero
 	// full decoding
 	// - find end of string
-	for s.cur[quotePos-1] == '\\' {
-		n := strings.IndexByte(s.cur[quotePos+1:], '"')
+	for s.cur[s.off+quotePos-1] == '\\' {
+		n := strings.IndexByte(s.cur[s.off+quotePos+1:], '"')
 		quotePos += n + 1
+		// TODO(vovkasm): probably error, should check n instead of quotePos
 		if quotePos < 0 {
 			s.err = fmt.Errorf("incorrect syntax (expected close quote)")
 			return ""
 		}
 	}
 	// (from standard json package)
-	ret, ok := unquote(s.cur[:quotePos])
-	s.cur = s.cur[quotePos+1:]
+	ret, ok := unquote(s.cur[s.off : s.off+quotePos])
+	s.off += quotePos + 1
 	if !ok {
 		s.err = fmt.Errorf("syntax error (string contains invalid characters)")
 	}
@@ -309,24 +311,24 @@ func getu4(s []byte) rune {
 const charToNum64 int64 = 0x0F
 
 func (s *decodeState) decodeNumber() float64 {
-	var pos int = 0
+	var startPos = s.off
 	var signMul int64 = 1
 
 	// sign
-	if s.cur[pos] == '-' {
+	if s.cur[s.off] == '-' {
 		signMul = -1
-		pos++
+		s.off++
 	}
 
 	// significand
 	// - integer
-	if len(s.cur) > pos && s.cur[pos] >= '1' && s.cur[pos] <= '9' {
-		pos++
-		for len(s.cur) > pos && len(s.cur) >= 1 && s.cur[pos] >= '0' && s.cur[pos] <= '9' {
-			pos++
+	if len(s.cur) > s.off && s.cur[s.off] >= '1' && s.cur[s.off] <= '9' {
+		s.off++
+		for len(s.cur) > s.off && s.cur[s.off] >= '0' && s.cur[s.off] <= '9' {
+			s.off++
 		}
-	} else if len(s.cur) > pos && s.cur[pos] == '0' {
-		pos++
+	} else if len(s.cur) > s.off && s.cur[s.off] == '0' {
+		s.off++
 	} else {
 		s.err = fmt.Errorf("incorrect number (expected digit)")
 		return 0.0
@@ -334,13 +336,13 @@ func (s *decodeState) decodeNumber() float64 {
 
 	// - fractional
 	var slowParsing bool
-	if len(s.cur) > pos && s.cur[pos] == '.' {
+	if len(s.cur) > s.off && s.cur[s.off] == '.' {
 		slowParsing = true
-		pos++
-		if len(s.cur) > pos && s.cur[pos] >= '0' && s.cur[pos] <= '9' {
-			pos++
-			for len(s.cur) > pos && s.cur[pos] >= '0' && s.cur[pos] <= '9' {
-				pos++
+		s.off++
+		if len(s.cur) > s.off && s.cur[s.off] >= '0' && s.cur[s.off] <= '9' {
+			s.off++
+			for len(s.cur) > s.off && s.cur[s.off] >= '0' && s.cur[s.off] <= '9' {
+				s.off++
 			}
 		} else {
 			s.err = fmt.Errorf("incorrect number (expected fractional)")
@@ -349,17 +351,17 @@ func (s *decodeState) decodeNumber() float64 {
 	}
 
 	// exponential
-	if len(s.cur) > pos && (s.cur[pos] == 'e' || s.cur[pos] == 'E') {
+	if len(s.cur) > s.off && (s.cur[s.off] == 'e' || s.cur[s.off] == 'E') {
 		slowParsing = true
-		pos++
-		if len(s.cur) > pos && (s.cur[pos] == '+' || s.cur[pos] == '-') {
-			pos++
+		s.off++
+		if len(s.cur) > s.off && (s.cur[s.off] == '+' || s.cur[s.off] == '-') {
+			s.off++
 		}
 
-		if len(s.cur) > pos && s.cur[pos] >= '0' && s.cur[pos] <= '9' {
-			pos++
-			for len(s.cur) > pos && s.cur[pos] >= '0' && s.cur[pos] <= '9' {
-				pos++
+		if len(s.cur) > s.off && s.cur[s.off] >= '0' && s.cur[s.off] <= '9' {
+			s.off++
+			for len(s.cur) > s.off && s.cur[s.off] >= '0' && s.cur[s.off] <= '9' {
+				s.off++
 			}
 		} else {
 			s.err = fmt.Errorf("incorrect number (expected digit)")
@@ -369,50 +371,47 @@ func (s *decodeState) decodeNumber() float64 {
 
 	if !slowParsing {
 		if signMul < 0 {
-			s.cur = s.cur[1:]
-			pos--
+			startPos++
 		}
 		var acc int64
-		switch pos {
+		switch s.off - startPos {
 		case 1:
-			acc = int64(s.cur[0]) & charToNum64
+			acc = int64(s.cur[startPos]) & charToNum64
 		case 2:
-			acc = 10*(int64(s.cur[0])&charToNum64) + (int64(s.cur[1]) & charToNum64)
+			acc = 10*(int64(s.cur[startPos])&charToNum64) + (int64(s.cur[startPos+1]) & charToNum64)
 		case 3:
-			acc = 100*(int64(s.cur[0])&charToNum64) + 10*(int64(s.cur[1])&charToNum64) + int64(s.cur[2])&charToNum64
+			acc = 100*(int64(s.cur[startPos])&charToNum64) + 10*(int64(s.cur[startPos+1])&charToNum64) + int64(s.cur[startPos+2])&charToNum64
 		case 4:
-			acc = 1000*(int64(s.cur[0])&charToNum64) + 100*(int64(s.cur[1])&charToNum64) + 10*(int64(s.cur[2])&charToNum64) + int64(s.cur[3])&charToNum64
+			acc = 1000*(int64(s.cur[startPos])&charToNum64) + 100*(int64(s.cur[startPos+1])&charToNum64) + 10*(int64(s.cur[startPos+2])&charToNum64) + int64(s.cur[startPos+3])&charToNum64
 		default:
-			i := pos - 1
+			i := s.off - 1
 			var mul int64 = 1
-			for i >= 0 {
+			for i >= startPos {
 				acc += mul * (int64(s.cur[i]) & charToNum64)
 				mul *= 10
 				i--
 			}
 		}
-		s.cur = s.cur[pos:]
 		return float64(signMul * acc)
 	}
 
-	val, err := strconv.ParseFloat(string(s.cur[:pos]), 64)
+	val, err := strconv.ParseFloat(string(s.cur[startPos:s.off]), 64)
 	if err != nil {
 		s.err = err
 	}
-	s.cur = s.cur[pos:]
 
 	return val
 }
 
 func (s *decodeState) decodeValue() interface{} {
 	s.skipSpaces()
-	if len(s.cur) == 0 {
+	if len(s.cur) <= s.off {
 		s.err = fmt.Errorf("incorrect syntax")
 		return nil
 	}
-	switch s.cur[0] {
+	switch s.cur[s.off] {
 	case '"':
-		s.cur = s.cur[1:]
+		s.off++
 		val := s.decodeString()
 		if s.err != nil {
 			return nil
@@ -420,7 +419,7 @@ func (s *decodeState) decodeValue() interface{} {
 			return val
 		}
 	case '{':
-		s.cur = s.cur[1:]
+		s.off++
 		val := s.decodeObject()
 		if s.err != nil {
 			return nil
@@ -428,7 +427,7 @@ func (s *decodeState) decodeValue() interface{} {
 			return val
 		}
 	case '[':
-		s.cur = s.cur[1:]
+		s.off++
 		val := s.decodeSlice()
 		if s.err != nil {
 			return nil
@@ -443,22 +442,22 @@ func (s *decodeState) decodeValue() interface{} {
 			return val
 		}
 	case 't':
-		if len(s.cur) >= 4 && s.cur[:4] == "true" {
-			s.cur = s.cur[4:]
+		if len(s.cur) >= s.off+4 && s.cur[s.off:s.off+4] == "true" {
+			s.off += 4
 			return true
 		} else {
 			s.err = fmt.Errorf("'true' expected")
 		}
 	case 'f':
-		if len(s.cur) >= 5 && s.cur[:5] == "false" {
-			s.cur = s.cur[5:]
+		if len(s.cur) >= s.off+5 && s.cur[s.off:s.off+5] == "false" {
+			s.off += 5
 			return false
 		} else {
 			s.err = fmt.Errorf("'false' expected")
 		}
 	case 'n':
-		if len(s.cur) >= 4 && s.cur[:4] == "null" {
-			s.cur = s.cur[4:]
+		if len(s.cur) >= s.off+4 && s.cur[s.off:s.off+4] == "null" {
+			s.off += 4
 			return nil
 		} else {
 			s.err = fmt.Errorf("'null' expected")
