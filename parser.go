@@ -149,28 +149,28 @@ func (s *decodeState) decodeString() string {
 		s.err = fmt.Errorf("incorrect syntax (expected close quote)")
 		return ""
 	}
+	quotePos += s.off
 	// fast path
-	val := s.cur[s.off : s.off+quotePos]
+	val := s.cur[s.off:quotePos]
 	if strings.IndexByte(val, '\\') < 0 {
-		s.off += quotePos + 1
+		s.off = quotePos + 1
 		return val
 	}
 
 	// TODO(vovkasm): rewrite from zero
 	// full decoding
 	// - find end of string
-	for s.cur[s.off+quotePos-1] == '\\' {
-		n := strings.IndexByte(s.cur[s.off+quotePos+1:], '"')
-		quotePos += n + 1
-		// TODO(vovkasm): probably error, should check n instead of quotePos
-		if quotePos < 0 {
+	for s.cur[quotePos-1] == '\\' {
+		n := strings.IndexByte(s.cur[quotePos+1:], '"')
+		if n < 0 {
 			s.err = fmt.Errorf("incorrect syntax (expected close quote)")
 			return ""
 		}
+		quotePos += n + 1
 	}
 	// (from standard json package)
-	ret, ok := unquote(s.cur[s.off : s.off+quotePos])
-	s.off += quotePos + 1
+	ret, ok := unquote(s.cur[s.off:quotePos])
+	s.off = quotePos + 1
 	if !ok {
 		s.err = fmt.Errorf("syntax error (string contains invalid characters)")
 	}
