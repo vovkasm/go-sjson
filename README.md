@@ -6,8 +6,11 @@ Sjson designed to be fast and simple, for now it supports only dynamic deseriali
 Simple benchmark shows ~2x speedup against encoding/json standard parser.
 
 ```
- BenchmarkSimple   300000             10216 ns/op
- BenchmarkStd      200000             22413 ns/op
+	$ go test -bench=Sample\|Code -benchtime=5s
+	BenchmarkSample_sjson    1000000              7582 ns/op          87.43 MB/s // Equivalent of our production JSON
+	BenchmarkSample__json     300000             19579 ns/op          33.86 MB/s
+	BenchmarkCode_sjson          300          28384877 ns/op          68.36 MB/s // JSON Text from the encoding/json package
+	BenchmarkCode__json          100          60002297 ns/op          32.34 MB/s
 ```
 
 ## Links
@@ -18,8 +21,8 @@ Some useful links.
 
 ## Thanks
 
-Development of the project was sponsored by [Crazy Panda](http://cpdecision.com)
-for processing a statistical data.
+Development of the project was sponsored by [CP Decision Limited](http://cpdecision.com)
+as part of a project on processing statistical data.
 
 Some ideas was borrowed from excellent Marc A. Lehmanns JSON::XS code.
 
