@@ -1,7 +1,6 @@
 package sjson
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 	"unicode"
@@ -28,10 +27,24 @@ func Decode(json string) (interface{}, error) {
 	return ret, state.err
 }
 
+// A SyntaxError is a description of a JSON syntax error.
+type SyntaxError struct {
+	msg    string // description of error
+	Offset int    // current parser position at which the error occurred
+}
+
+func (e *SyntaxError) Error() string { return e.msg }
+
 type decodeState struct {
 	cur string // current bytes
 	off int    // current offset
 	err error
+}
+
+func (s *decodeState) error(msg string) {
+	if s.err == nil {
+		s.err = &SyntaxError{msg, s.off}
+	}
 }
 
 func (s *decodeState) skipSpaces() {
@@ -50,12 +63,39 @@ const arr0Size int = 8
 
 func (s *decodeState) decodeSlice() []interface{} {
 	var arr0 [arr0Size]interface{}
-	var i int
 
 	s.skipSpaces()
+
+	if len(s.cur) > s.off && s.cur[s.off] == ']' {
+		s.off++
+		return []interface{}{}
+	}
+
+	arr0[0] = s.decodeValue()
+	if s.err != nil {
+		return arr0[:1]
+	}
+
+	var i int = 1
+SMALL:
 	for len(s.cur) > s.off {
-		if s.cur[s.off] == ']' {
+		s.skipSpaces()
+		if len(s.cur) <= s.off {
+			s.error("incorrect syntax - incomplete array")
+			return arr0[:i]
+		}
+		switch s.cur[s.off] {
+		case ']':
 			s.off++
+			return arr0[:i]
+		case ',':
+			s.off++
+			s.skipSpaces()
+			if i >= arr0Size {
+				break SMALL
+			}
+		default:
+			s.error("incorrect syntax - incomplete array")
 			return arr0[:i]
 		}
 
@@ -67,13 +107,11 @@ func (s *decodeState) decodeSlice() []interface{} {
 		i++
 
 		s.skipSpaces()
-		if len(s.cur) > s.off && s.cur[s.off] == ',' {
-			s.off++
-			s.skipSpaces()
-			if i >= arr0Size {
-				break
-			}
-		}
+	}
+
+	if len(s.cur) <= s.off {
+		s.error("incorrect syntax - incomplete array")
+		return arr0[:i]
 	}
 
 	arr := arr0[:]
@@ -97,7 +135,7 @@ func (s *decodeState) decodeSlice() []interface{} {
 		}
 	}
 
-	s.err = fmt.Errorf("incorrect syntax")
+	s.error("incorrect syntax - incomplete array")
 	return arr
 }
 
@@ -108,7 +146,7 @@ func (s *decodeState) decodeObject() map[string]interface{} {
 		s.skipSpaces()
 
 		if len(s.cur) <= s.off {
-			s.err = fmt.Errorf("incorrect syntax str:'%s' off:%d", s.cur, s.off)
+			s.error("incorrect syntax - object")
 			return obj
 		}
 
@@ -126,7 +164,7 @@ func (s *decodeState) decodeObject() map[string]interface{} {
 			if len(s.cur) > s.off && s.cur[s.off] == ':' {
 				s.off++
 			} else {
-				s.err = fmt.Errorf("incorrect syntax (expect ':' after key)")
+				s.error("incorrect syntax - expect ':' after object key")
 				return obj
 			}
 			obj[key] = s.decodeValue()
@@ -135,7 +173,7 @@ func (s *decodeState) decodeObject() map[string]interface{} {
 				s.off++
 			}
 		default:
-			s.err = fmt.Errorf("incorrect syntax (expect object key)")
+			s.error("incorrect syntax - expect object key or incomplete object")
 			return obj
 		}
 	}
@@ -146,7 +184,8 @@ func (s *decodeState) decodeObject() map[string]interface{} {
 func (s *decodeState) decodeString() string {
 	quotePos := strings.IndexByte(s.cur[s.off:], '"')
 	if quotePos < 0 {
-		s.err = fmt.Errorf("incorrect syntax (expected close quote)")
+		s.off = len(s.cur)
+		s.error("incorrect syntax - expect close quote")
 		return ""
 	}
 	quotePos += s.off
@@ -163,7 +202,8 @@ func (s *decodeState) decodeString() string {
 	for s.cur[quotePos-1] == '\\' {
 		n := strings.IndexByte(s.cur[quotePos+1:], '"')
 		if n < 0 {
-			s.err = fmt.Errorf("incorrect syntax (expected close quote)")
+			s.off = len(s.cur)
+			s.error("incorrect syntax - expected close quote")
 			return ""
 		}
 		quotePos += n + 1
@@ -172,7 +212,7 @@ func (s *decodeState) decodeString() string {
 	ret, ok := unquote(s.cur[s.off:quotePos])
 	s.off = quotePos + 1
 	if !ok {
-		s.err = fmt.Errorf("syntax error (string contains invalid characters)")
+		s.error("syntax error - string contains invalid characters")
 	}
 
 	return ret
@@ -330,7 +370,7 @@ func (s *decodeState) decodeNumber() float64 {
 	} else if len(s.cur) > s.off && s.cur[s.off] == '0' {
 		s.off++
 	} else {
-		s.err = fmt.Errorf("incorrect number (expected digit)")
+		s.error("incorrect number - expected digit")
 		return 0.0
 	}
 
@@ -345,7 +385,7 @@ func (s *decodeState) decodeNumber() float64 {
 				s.off++
 			}
 		} else {
-			s.err = fmt.Errorf("incorrect number (expected fractional)")
+			s.error("incorrect number - expected fractional")
 			return 0.0
 		}
 	}
@@ -364,7 +404,7 @@ func (s *decodeState) decodeNumber() float64 {
 				s.off++
 			}
 		} else {
-			s.err = fmt.Errorf("incorrect number (expected digit)")
+			s.error("incorrect number - expected digit in exponential")
 			return 0.0
 		}
 	}
@@ -406,64 +446,44 @@ func (s *decodeState) decodeNumber() float64 {
 func (s *decodeState) decodeValue() interface{} {
 	s.skipSpaces()
 	if len(s.cur) <= s.off {
-		s.err = fmt.Errorf("incorrect syntax")
+		s.error("incorrect syntax - expect value")
 		return nil
 	}
 	switch s.cur[s.off] {
 	case '"':
 		s.off++
-		val := s.decodeString()
-		if s.err != nil {
-			return nil
-		} else {
-			return val
-		}
+		return s.decodeString()
 	case '{':
 		s.off++
-		val := s.decodeObject()
-		if s.err != nil {
-			return nil
-		} else {
-			return val
-		}
+		return s.decodeObject()
 	case '[':
 		s.off++
-		val := s.decodeSlice()
-		if s.err != nil {
-			return nil
-		} else {
-			return val
-		}
+		return s.decodeSlice()
 	case '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
-		val := s.decodeNumber()
-		if s.err != nil {
-			return nil
-		} else {
-			return val
-		}
+		return s.decodeNumber()
 	case 't':
 		if len(s.cur) >= s.off+4 && s.cur[s.off:s.off+4] == "true" {
 			s.off += 4
 			return true
 		} else {
-			s.err = fmt.Errorf("'true' expected")
+			s.error("'true' expected")
 		}
 	case 'f':
 		if len(s.cur) >= s.off+5 && s.cur[s.off:s.off+5] == "false" {
 			s.off += 5
 			return false
 		} else {
-			s.err = fmt.Errorf("'false' expected")
+			s.error("'false' expected")
 		}
 	case 'n':
 		if len(s.cur) >= s.off+4 && s.cur[s.off:s.off+4] == "null" {
 			s.off += 4
 			return nil
 		} else {
-			s.err = fmt.Errorf("'null' expected")
+			s.error("'null' expected")
 		}
 	default:
-		s.err = fmt.Errorf("incorrect syntax")
+		s.error("incorrect syntax - unrecognized token")
 	}
 	return nil
 }

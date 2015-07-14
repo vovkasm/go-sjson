@@ -1,10 +1,14 @@
 /*
-Package sjson provides decoding of JSON Text as defined in ECMA-404.
+Package sjson provides fast and simple JSON decoder.
 
 Sjson is designed to be fast and simple, for now it supports only dynamic deserialization.
+It can decode JSON Text as defined in ECMA-404.
 Simple benchmark test shows ~2x speedup against encoding/json standard parser.
-	BenchmarkSimple   300000             10216 ns/op
-	BenchmarkStd      200000             22413 ns/op
+	$ go test -bench=Sample\|Code -benchtime=5s
+	BenchmarkSample_sjson    1000000              7582 ns/op          87.43 MB/s // Equivalent of our production JSON
+	BenchmarkSample__json     300000             19579 ns/op          33.86 MB/s
+	BenchmarkCode_sjson          300          28384877 ns/op          68.36 MB/s // JSON Text from the encoding/json package
+	BenchmarkCode__json          100          60002297 ns/op          32.34 MB/s
 
 Links
 
