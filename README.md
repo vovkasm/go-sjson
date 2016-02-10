@@ -1,4 +1,6 @@
 # go-sjson
+[![GoDoc](https://godoc.org/github.com/vovkasm/go-sjson?status.svg)](https://godoc.org/github.com/vovkasm/go-sjson)
+
 Fast and simple JSON parser for Go
 
 Package sjson provides decoding of JSON Text as defined in [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
