@@ -199,7 +199,7 @@ func (s *decodeState) decodeString() string {
 	// TODO(vovkasm): rewrite from zero
 	// full decoding
 	// - find end of string
-	for s.cur[quotePos-1] == '\\' {
+	for escapeCount(s.cur, quotePos-1) % 2 == 1 {
 		n := strings.IndexByte(s.cur[quotePos+1:], '"')
 		if n < 0 {
 			s.off = len(s.cur)
@@ -216,6 +216,16 @@ func (s *decodeState) decodeString() string {
 	}
 
 	return ret
+}
+
+//count escape chars from position to backward
+func escapeCount(s string, position int) int {
+	count := 0
+	for s[position] == '\\' {
+		count++
+		position--
+	}
+	return count
 }
 
 // unquote converts a quoted JSON string literal s into an actual string t.
