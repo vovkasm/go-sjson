@@ -106,6 +106,11 @@ var _ = Describe("parser", func() {
 		// spaces
 		{"skip various spaces", " \u000a\u000d\u0009true", BeTrue(), ExpectNoErr()},
 		{"don't skip low chars as spaces", " \u0008true", BeNil(), ExpectSyntaxErr(`unrecognized token`, 1)},
+		//escapes
+		{"escape quote", `{"k1":"v1\"qwe"}`, Equal(map[string]interface{}{"k1": `v1"qwe`}), ExpectNoErr()},
+		{"escape slash", `{"k1":"v1\\"}`, Equal(map[string]interface{}{"k1": `v1\`}), ExpectNoErr()},
+		{"escape slash and quote", `{"k1":"v1\\\"qwe"}`, Equal(map[string]interface{}{"k1": `v1\"qwe`}), ExpectNoErr()},
+		{"escape quote error", `{"k1":"v1\"qwe}`, Equal(map[string]interface{}{"k1": ""}), ExpectSyntaxErr("incorrect syntax - expected close quote", 15)},
 	}
 	for n, t := range table {
 		n, t := n, t
