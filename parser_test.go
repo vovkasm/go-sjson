@@ -73,7 +73,9 @@ var _ = Describe("parser", func() {
 		{"can decode escapes", `"\""`, Equal(`"`), ExpectNoErr()},
 		{"can decode escapes2", `"\u00FC"`, Equal("\u00fc"), ExpectNoErr()},
 		{"can decode escapes3", `"\u002F\u002f\//"`, Equal("////"), ExpectNoErr()},
-		{"can decode escapes3", `"\u3042"`, Equal(`あ`), ExpectNoErr()},                          // Japanese "a"
+		{"can decode escapes3", `"\u3042"`, Equal(`あ`), ExpectNoErr()}, // Japanese "a"
+		{"can decode escapes4", `"abc\\"`, Equal(`abc\`), ExpectNoErr()},
+		{"can decode escapes5", `"abc\\\"qwe"`, Equal(`abc\"qwe`), ExpectNoErr()},
 		{"can decode escapes from extended range", `"\ud800\udd40"`, Equal("𐅀"), ExpectNoErr()}, // Greek Acrophonic Attic One Quarter
 		{"errors in strings", `"ab`, Equal(""), ExpectSyntaxErr(`incorrect syntax`, 3)},
 		{"errors in strings 2", `"ab\"cd`, Equal(""), ExpectSyntaxErr(`incorrect syntax`, 7)},
@@ -106,11 +108,6 @@ var _ = Describe("parser", func() {
 		// spaces
 		{"skip various spaces", " \u000a\u000d\u0009true", BeTrue(), ExpectNoErr()},
 		{"don't skip low chars as spaces", " \u0008true", BeNil(), ExpectSyntaxErr(`unrecognized token`, 1)},
-		//escapes
-		{"escape quote", `{"k1":"v1\"qwe"}`, Equal(map[string]interface{}{"k1": `v1"qwe`}), ExpectNoErr()},
-		{"escape slash", `{"k1":"v1\\"}`, Equal(map[string]interface{}{"k1": `v1\`}), ExpectNoErr()},
-		{"escape slash and quote", `{"k1":"v1\\\"qwe"}`, Equal(map[string]interface{}{"k1": `v1\"qwe`}), ExpectNoErr()},
-		{"escape quote error", `{"k1":"v1\"qwe}`, Equal(map[string]interface{}{"k1": ""}), ExpectSyntaxErr("incorrect syntax - expect close quote", 15)},
 	}
 	for n, t := range table {
 		n, t := n, t
