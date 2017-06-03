@@ -3,12 +3,13 @@ package sjson_test
 import (
 	"encoding/json"
 	"fmt"
+	"math"
+	"testing"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
 	"github.com/vovkasm/go-sjson"
-	"math"
-	"testing"
 )
 
 func TestDict(t *testing.T) {
