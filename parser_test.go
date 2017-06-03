@@ -79,9 +79,9 @@ var _ = Describe("parser", func() {
 		{"errors in strings 2", `"ab\"cd`, Equal(""), ExpectSyntaxErr(`incorrect syntax`, 7)},
 		{"many escapes", `"bbb\"\\\b\f\n\r\tあeee"`, Equal("bbb\"\\\b\f\n\r\tあeee"), ExpectNoErr()},
 		{"many escapes 2", `"bあbb\"\\\b\f\n\r\teee"`, Equal("bあbb\"\\\b\f\n\r\teee"), ExpectNoErr()},
-		{"invalid escapes", `"\a"`, Equal(``), ExpectErr("string contains invalid characters")},
+		{"invalid escapes", `"\a"`, Equal(``), ExpectErr("incorrect syntax - expect escape sequence")},
 		//TODO: do not allow control characters for fast paths :-(
-		{"control characters invalid in strings", "\"\r\\\r\"", Equal(``), ExpectErr("string contains invalid characters")},
+		{"control characters invalid in strings", "\"\r\\\r\"", Equal(``), ExpectErr("incorrect syntax - expect escape sequence")},
 		// objects
 		{"can decode empty object", `{}`, Equal(map[string]interface{}{}), ExpectNoErr()},
 		{"can decode simple object", `{"key1":"val1"}`, Equal(map[string]interface{}{"key1": "val1"}), ExpectNoErr()},
@@ -110,7 +110,7 @@ var _ = Describe("parser", func() {
 		{"escape quote", `{"k1":"v1\"qwe"}`, Equal(map[string]interface{}{"k1": `v1"qwe`}), ExpectNoErr()},
 		{"escape slash", `{"k1":"v1\\"}`, Equal(map[string]interface{}{"k1": `v1\`}), ExpectNoErr()},
 		{"escape slash and quote", `{"k1":"v1\\\"qwe"}`, Equal(map[string]interface{}{"k1": `v1\"qwe`}), ExpectNoErr()},
-		{"escape quote error", `{"k1":"v1\"qwe}`, Equal(map[string]interface{}{"k1": ""}), ExpectSyntaxErr("incorrect syntax - expected close quote", 15)},
+		{"escape quote error", `{"k1":"v1\"qwe}`, Equal(map[string]interface{}{"k1": ""}), ExpectSyntaxErr("incorrect syntax - expect close quote", 15)},
 	}
 	for n, t := range table {
 		n, t := n, t
