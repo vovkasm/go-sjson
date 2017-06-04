@@ -212,6 +212,7 @@ func (s *decodeState) decodeString() string {
 	}
 
 	// full unescape
+	// TODO(vovkasm): benchmark and compare with custom implementation without bytes.Buffer
 	var b bytes.Buffer
 	b.WriteString(fistChunk)
 
