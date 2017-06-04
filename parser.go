@@ -272,12 +272,17 @@ func (s *decodeState) decodeStringEscape() (r rune) {
 		s.off++
 	case 'u':
 		s.off++
-		rr, err := strconv.ParseUint(s.cur[s.off:s.off+4], 16, 64)
-		s.off += 4
-		if err != nil {
-			s.error("incorrect syntax - expect hex number")
+		if len(s.cur) >= s.off+4 {
+			rr, err := strconv.ParseUint(s.cur[s.off:s.off+4], 16, 64)
+			s.off += 4
+			if err != nil {
+				s.error("incorrect syntax - expect hex number")
+			}
+			r = rune(rr)
+		} else {
+			s.error("incorrect syntax - expect 4-digit hex number")
+			r = unicode.ReplacementChar
 		}
-		r = rune(rr)
 	default:
 		s.off++
 		s.error("incorrect syntax - expect escape sequence")

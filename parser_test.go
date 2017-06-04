@@ -81,7 +81,10 @@ var _ = Describe("parser", func() {
 		{"errors in strings 2", `"ab\"cd`, Equal(""), ExpectSyntaxErr(`incorrect syntax`, 7)},
 		{"many escapes", `"bbb\"\\\b\f\n\r\tあeee"`, Equal("bbb\"\\\b\f\n\r\tあeee"), ExpectNoErr()},
 		{"many escapes 2", `"bあbb\"\\\b\f\n\r\teee"`, Equal("bあbb\"\\\b\f\n\r\teee"), ExpectNoErr()},
-		{"invalid escapes", `"\a"`, Equal(``), ExpectErr("incorrect syntax - expect escape sequence")},
+		{"invalid escapes", `"\a"`, Equal(""), ExpectErr("incorrect syntax - expect escape sequence")},
+		{"invalid escapes2", `"\`, Equal(""), ExpectSyntaxErr("expect close quote", 2)},
+		{"invalid escapes3", `"\u"`, Equal(""), ExpectSyntaxErr("expect 4-digit hex number", 3)},
+		{"invalid escapes4", `"\uaaxx"`, Equal(""), ExpectSyntaxErr("expect hex number", 7)},
 		//TODO: do not allow control characters for fast paths :-(
 		{"control characters invalid in strings", "\"\r\\\r\"", Equal(``), ExpectErr("incorrect syntax - expect escape sequence")},
 		// objects
